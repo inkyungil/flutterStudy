@@ -19,7 +19,7 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   TextEditingController idController = TextEditingController();
   TextEditingController pwController = TextEditingController();
-  String mbId = "";
+  String TextmbId = "";
 
   Future<void> join() async {
     String mb_id = idController.text;
@@ -50,7 +50,7 @@ class _MyAppState extends State<MyApp> {
         String mbId = data['mb_id'];
         String mbPassword = data['mb_password'];
         setState(() {
-          mbId = data['mb_id']; // 상태 업데이트
+          TextmbId = data['mb_id']; // 상태 업데이트
         });
         // 파싱된 값 출력
         print('mb_id: $mbId');
@@ -96,7 +96,7 @@ class _MyAppState extends State<MyApp> {
                   },
                   child: Text('로그인 버튼'),
                 ),
-                Text('mb_id: $mbId')
+                Text('mb_id: $TextmbId')
               ],
             ),
           ),
