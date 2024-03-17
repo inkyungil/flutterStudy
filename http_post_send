@@ -1,0 +1,103 @@
+import 'dart:convert';
+
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+
+void main() {
+  runApp(
+    MyApp(),
+  );
+}
+
+class MyApp extends StatefulWidget {
+  const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  TextEditingController idController = TextEditingController();
+  TextEditingController pwController = TextEditingController();
+
+  Future<void> join() async {
+    String mb_id = idController.text;
+    String password = pwController.text;
+
+    final url = Uri.parse('https://propose9898.cafe24.com/api/join.php');
+    try {
+      final response = await http.post(url, body: {
+        'mb_id': mb_id,
+        'password': password,
+      });
+
+      //print('Response status: ${response.statusCode}');
+      // print('Response body: ${response.body}');
+
+// JSON 디코딩
+      Map<String, dynamic> parsedResponse = jsonDecode(response.body);
+
+// "data" 배열 추출
+      List<dynamic> dataList = parsedResponse['data'];
+
+// 데이터가 있는지 확인
+      if (dataList.isNotEmpty) {
+        // 첫 번째 항목 선택
+        Map<String, dynamic> data = dataList[0];
+
+        // "mb_id"와 "mb_password" 추출
+        String mbId = data['mb_id'];
+        String mbPassword = data['mb_password'];
+
+        // 파싱된 값 출력
+        print('mb_id: $mbId');
+        print('mb_password: $mbPassword');
+      } else {
+        print('데이터가 없습니다.');
+      }
+    } catch (e) {
+      print('Error: $e');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: Scaffold(
+        appBar: AppBar(
+          title: Text("title"),
+        ),
+        body: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Column(
+              children: [
+                TextField(
+                  controller: idController,
+                  decoration: InputDecoration(
+                      labelText: "아이디", hintText: "여기에 텍스트를 입력하세요"),
+                  onChanged: (value) {
+                    debugPrint(value);
+                  },
+                ),
+                TextField(
+                  controller: pwController,
+                  decoration: InputDecoration(
+                      labelText: "비밀번호", hintText: "여기에 텍스트를 입력하세요"),
+                  obscureText: true,
+                ),
+                SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: () {
+                    join();
+                  },
+                  child: Text('로그인 버튼'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
