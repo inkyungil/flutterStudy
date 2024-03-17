@@ -1,0 +1,80 @@
+import 'dart:convert';
+
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+
+void main() {
+  runApp(
+    MyHome(),
+  );
+}
+
+class MyHome extends StatefulWidget {
+  const MyHome({super.key});
+
+  @override
+  State<MyHome> createState() => _MyHomeState();
+}
+
+class _MyHomeState extends State<MyHome> {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'title',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: MySubPage(),
+    );
+  }
+}
+
+class MySubPage extends StatefulWidget {
+  const MySubPage({super.key});
+
+  @override
+  State<MySubPage> createState() => _MySubPageState();
+}
+
+class _MySubPageState extends State<MySubPage> {
+  Future<List<String>> _fetchData() async {
+    final response =
+        await http.get(Uri.parse('https://jsonplaceholder.typicode.com/posts'));
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = json.decode(response.body);
+      return List<String>.from(
+          data.map((dynamic item) => item['title'] as String));
+    } else {
+      throw Exception('Failed to load data');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("title"),
+      ),
+      body: FutureBuilder<List<String>>(
+        future: _fetchData(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          } else {
+            return ListView.builder(
+              itemCount: snapshot.data!.length,
+              itemBuilder: (context, index) {
+                return ListTile(
+                  title: Text(snapshot.data![index]),
+                );
+              },
+            );
+          }
+        },
+      ),
+    );
+  }
+}
