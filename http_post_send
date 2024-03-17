@@ -19,6 +19,7 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   TextEditingController idController = TextEditingController();
   TextEditingController pwController = TextEditingController();
+  String mbId = "";
 
   Future<void> join() async {
     String mb_id = idController.text;
@@ -34,13 +35,13 @@ class _MyAppState extends State<MyApp> {
       //print('Response status: ${response.statusCode}');
       // print('Response body: ${response.body}');
 
-// JSON 디코딩
+      // JSON 디코딩
       Map<String, dynamic> parsedResponse = jsonDecode(response.body);
 
-// "data" 배열 추출
+      // "data" 배열 추출
       List<dynamic> dataList = parsedResponse['data'];
 
-// 데이터가 있는지 확인
+      // 데이터가 있는지 확인
       if (dataList.isNotEmpty) {
         // 첫 번째 항목 선택
         Map<String, dynamic> data = dataList[0];
@@ -48,7 +49,9 @@ class _MyAppState extends State<MyApp> {
         // "mb_id"와 "mb_password" 추출
         String mbId = data['mb_id'];
         String mbPassword = data['mb_password'];
-
+        setState(() {
+          mbId = data['mb_id']; // 상태 업데이트
+        });
         // 파싱된 값 출력
         print('mb_id: $mbId');
         print('mb_password: $mbPassword');
@@ -93,6 +96,7 @@ class _MyAppState extends State<MyApp> {
                   },
                   child: Text('로그인 버튼'),
                 ),
+                Text('mb_id: $mbId')
               ],
             ),
           ),
