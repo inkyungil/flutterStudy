@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:bip39/bip39.dart' as bip39;
+import 'package:netxproject/main_screen.dart';
 import 'package:web3dart/crypto.dart';
 import 'package:web3dart/web3dart.dart';
 import 'package:encrypted_shared_preferences/encrypted_shared_preferences.dart';
@@ -81,6 +82,14 @@ class _MyHomePageState extends State<MyHomePage> {
                   createWallet();
                 },
                 child: const Text('Create Wallet'),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).push(MaterialPageRoute(
+                      builder: (context) => const MainScreen()));
+                },
+                child: const Text('IPFS'),
               ),
             ],
           ),
