@@ -1,0 +1,214 @@
+import 'dart:math';
+import 'dart:typed_data';
+
+import 'package:encrypted_shared_preferences/encrypted_shared_preferences.dart';
+import 'package:flutter/material.dart';
+import 'package:bip39/bip39.dart' as bip39;
+import 'package:web3dart/crypto.dart';
+import 'package:web3dart/web3dart.dart';
+
+void main() {
+  runApp(
+    const Siginup(),
+  );
+}
+
+class Siginup extends StatefulWidget {
+  const Siginup({Key? key}) : super(key: key);
+
+  @override
+  State<Siginup> createState() => _SiginupState();
+}
+
+class _SiginupState extends State<Siginup> {
+  bool _obscureText = true;
+  IconData _iconVisible = Icons.visibility_off;
+
+  EncryptedSharedPreferences encryptedSharedPreferences =
+      EncryptedSharedPreferences();
+
+  void _toggleObscureText() {
+    setState(() {
+      _obscureText = !_obscureText;
+      if (_obscureText == true) {
+        _iconVisible = Icons.visibility_off;
+      } else {
+        _iconVisible = Icons.visibility;
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // TextEditingController 생성
+    TextEditingController passwordController = TextEditingController();
+    TextEditingController reEnterPasswordController = TextEditingController();
+    //encryptedSharedPreferences.remove("privateKey");
+
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: FutureBuilder(
+          future: encryptedSharedPreferences.getString("privateKey"),
+          builder: (BuildContext context, AsyncSnapshot<String?> snapshot) {
+            print("snapshot.hasData:: ${snapshot.hasData}");
+            print("snapshot.data:: ${snapshot.data}");
+
+            if (snapshot.hasData && snapshot.data != "") {
+              // privateKey 값이 존재하는 경우
+              return const SecondPage();
+            } else {
+              // privateKey 값이 존재하지 않는 경우 회원가입 페이지 표시
+              return Scaffold(
+                appBar: AppBar(
+                  centerTitle: true,
+                  title: const Text(
+                    "회원가입",
+                    style: TextStyle(fontSize: 28),
+                  ),
+                ),
+                body: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: Image.network(
+                            "https://i.ibb.co/CwzHq4z/trans-logo-512.png",
+                            width: 81,
+                          ),
+                        ),
+                        TextField(
+                          controller:
+                              passwordController, // TextEditingController 연결
+                          decoration: InputDecoration(
+                            labelText: "Password",
+                            suffixIcon: IconButton(
+                                icon: Icon(_iconVisible,
+                                    color: Colors.grey[700], size: 20),
+                                onPressed: () {
+                                  _toggleObscureText();
+                                }),
+                          ),
+                          obscureText: _obscureText,
+                        ),
+                        TextField(
+                          controller:
+                              reEnterPasswordController, // TextEditingController 연결
+                          decoration: const InputDecoration(
+                            labelText: "Re-enter Password",
+                          ),
+                          obscureText: _obscureText,
+                        ),
+                        Container(
+                          width: double.infinity,
+                          margin: EdgeInsets.only(top: 24),
+                          child: Builder(
+                            builder: (BuildContext context) {
+                              return ElevatedButton(
+                                onPressed: () async {
+                                  if (passwordController.text.length < 4) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content:
+                                            Text('비밀번호는 최소 4자리 이상이어야 합니다.'),
+                                        duration: Duration(
+                                            seconds: 2), // Snackbar 표시 시간 설정
+                                      ),
+                                    );
+                                  } else if (reEnterPasswordController
+                                          .text.length <
+                                      4) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content:
+                                            Text('비밀번호는 최소 4자리 이상이어야 합니다.'),
+                                        duration: Duration(
+                                            seconds: 2), // Snackbar 표시 시간 설정
+                                      ),
+                                    );
+                                  } else {
+                                    EthereumAddress? address =
+                                        await createWallet(
+                                            passwordController.text);
+                                    if (address != null) {
+                                      // 회원가입 완료
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                          content: Text('회원가입이 완료되었습니다.'),
+                                          duration: Duration(
+                                              seconds: 2), // Snackbar 표시 시간 설정
+                                        ),
+                                      );
+                                    } else {
+                                      // 다른 로직 실행
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                          content: Text('다른 로직 실행'),
+                                          duration: Duration(
+                                              seconds: 2), // Snackbar 표시 시간 설정
+                                        ),
+                                      );
+                                    }
+                                  }
+                                },
+                                child: const Text("Sign up"),
+                              );
+                            },
+                          ),
+                        )
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }
+          }),
+    );
+  }
+
+  Future<EthereumAddress?> createWallet(String password) async {
+    String mnemonic = bip39.generateMnemonic();
+    bip39.mnemonicToSeedHex(mnemonic);
+
+    final random = Random.secure();
+    final privateKeyBytes = Uint8List(32);
+    for (int i = 0; i < 32; i++) {
+      privateKeyBytes[i] = random.nextInt(256); // Generate random byte (0-255)
+    }
+
+    final privateKeyHex = '0x${bytesToHex(privateKeyBytes)}';
+
+    final credentials = EthPrivateKey.fromHex(privateKeyHex);
+    Wallet wallet = Wallet.createNew(credentials, password, random);
+
+    final keystore = wallet.toJson();
+    EthereumAddress address = await credentials.extractAddress();
+
+    encryptedSharedPreferences.setString("seed", mnemonic);
+    encryptedSharedPreferences.setString("privateKey", privateKeyHex);
+
+    encryptedSharedPreferences.setString("publickey", address.hex);
+    encryptedSharedPreferences.setString("keystore", keystore);
+
+    return address;
+  }
+}
+
+class SecondPage extends StatelessWidget {
+  const SecondPage({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("다른 페이지"),
+      ),
+      body: Center(
+        child: Text("다른 페이지입니다."),
+      ),
+    );
+  }
+}
