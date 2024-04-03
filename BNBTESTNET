@@ -31,7 +31,7 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  // 연결하려는 네트워크 : Ropsten은 아래 주소로 고정
+  // 연결하려는 네트워크 : BNB TESTNET
   static const apiUrl = "https://data-seed-prebsc-1-s1.bnbchain.org:8545";
   final Web3Client _client = Web3Client(apiUrl, Client());
 
