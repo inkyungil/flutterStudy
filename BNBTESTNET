@@ -1,0 +1,151 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:http/http.dart';
+import 'package:web3dart/web3dart.dart';
+
+void main() {
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Counter',
+      theme: ThemeData(
+        primarySwatch: Colors.green,
+      ),
+      home: const MyHomePage(title: 'Counter'),
+    );
+  }
+}
+
+class MyHomePage extends StatefulWidget {
+  const MyHomePage({Key? key, required this.title}) : super(key: key);
+  final String title;
+
+  @override
+  State<MyHomePage> createState() => _MyHomePageState();
+}
+
+class _MyHomePageState extends State<MyHomePage> {
+  // 연결하려는 네트워크 : Ropsten은 아래 주소로 고정
+  static const apiUrl = "https://data-seed-prebsc-1-s1.bnbchain.org:8545";
+  final Web3Client _client = Web3Client(apiUrl, Client());
+
+  // 메타마스크에서 가져와야하는 지갑키
+  static const privateKey =
+      "ed1228c38f31132e994365024dff6a17fe208876b3f91150d26f127cdfd666cc";
+  final EthPrivateKey _credentials = EthPrivateKey.fromHex(privateKey);
+
+  // 스마트 컨트랙트의 주소 값 : 리믹스에서 확인해야함
+  static final EthereumAddress contractAddr =
+      EthereumAddress.fromHex('0x678826CA5A5AABb9Bd3EdB115eb767C39Ae7EB2b');
+  DeployedContract? _contract;
+
+  // 스마트 컨트랙트 내의 함수 정의
+  ContractFunction? _initializeFunction;
+  ContractFunction? _incrementFunction;
+  ContractFunction? _decrementFunction;
+  ContractFunction? _getFunction;
+
+  int _counter = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // ABI 파일 가져오기
+    readAbi().then((String value) {
+      // ABI를 이용해서 함수 정의
+      _contract = DeployedContract(
+          ContractAbi.fromJson(value, 'Counter'), contractAddr);
+      _initializeFunction = _contract?.function('initialize');
+      _incrementFunction = _contract?.function('increment');
+      _decrementFunction = _contract?.function('decrement');
+      _getFunction = _contract?.function('get');
+      // 값 현재값 가져오기
+      _getCounter();
+    });
+  }
+
+  Future<String> readAbi() async {
+    return await rootBundle.loadString('assets/abi.json');
+  }
+
+  Future<void> _getCounter() async {
+    await _client.call(
+        contract: _contract!,
+        function: _getFunction!,
+        params: []).then((List result) {
+      setState(() {
+        _counter = result.first.toInt();
+      });
+    });
+  }
+
+  Future<void> _decrementCounter() async {
+    await _client.sendTransaction(
+      _credentials,
+      Transaction.callContract(
+        contract: _contract!,
+        function: _decrementFunction!,
+        parameters: [BigInt.from(1)],
+      ),
+      chainId: 97,
+    );
+  }
+
+  Future<void> _incrementCounter() async {
+    await _client.sendTransaction(
+      _credentials,
+      Transaction.callContract(
+        contract: _contract!,
+        function: _incrementFunction!,
+        parameters: [BigInt.from(1)],
+      ),
+      chainId: 97,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+        appBar: AppBar(
+          title: Text(widget.title),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: <Widget>[
+                  // 값을 내리는 함수
+                  IconButton(
+                    icon: const Icon(Icons.remove),
+                    onPressed: _decrementCounter, // null disables the button
+                  ),
+                  // Expanded expands its child to fill the available space.
+                  Text(
+                    '$_counter',
+                    style: Theme.of(context).textTheme.headline4,
+                  ),
+                  // 값을 추가하는 함수
+                  IconButton(
+                    icon: const Icon(Icons.add),
+                    onPressed: _incrementCounter,
+                  ),
+                ],
+              ),
+              // 현재 값을 확인하는 버튼
+              IconButton(
+                icon: const Icon(Icons.check),
+                onPressed: _getCounter,
+              )
+            ],
+          ),
+        ));
+  }
+}
