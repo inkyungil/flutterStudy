@@ -1,0 +1,199 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_ipfs/flutter_ipfs.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'dart:convert';
+
+class MainScreen extends StatefulWidget {
+  const MainScreen({Key? key}) : super(key: key);
+
+  @override
+  State<MainScreen> createState() => _MainScreenState();
+}
+
+class _MainScreenState extends State<MainScreen> {
+  final TextEditingController _publisher = TextEditingController();
+  final TextEditingController _category = TextEditingController();
+  final TextEditingController _description = TextEditingController();
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 1,
+          centerTitle: true,
+          title: const Text(
+            'Flutter Ipfs',
+            style: TextStyle(
+              letterSpacing: 1.2,
+              color: Colors.black,
+              fontSize: 19,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        body: SingleChildScrollView(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 25),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Center(
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      await ImagePickerService.pickImage(context);
+
+                      // ignore: avoid_print
+                      print(ImagePickerService.cid);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                    ),
+                    child: const SizedBox(
+                      height: 50,
+                      child: Center(
+                        child: Text(
+                          'Upload Image',
+                          style:
+                              TextStyle(fontSize: 18, fontFamily: 'Brand-Bold'),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Center(
+                  child: ElevatedButton(
+                    onPressed: () => VideoPickerService.pickVideo(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                    ),
+                    child: const SizedBox(
+                      height: 50,
+                      child: Center(
+                        child: Text(
+                          'Upload Video',
+                          style:
+                              TextStyle(fontSize: 18, fontFamily: 'Brand-Bold'),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Center(
+                  child: ElevatedButton(
+                    onPressed: () => FilePickerService.pickFile(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                    ),
+                    child: const SizedBox(
+                      height: 50,
+                      child: Center(
+                        child: Text(
+                          'Upload File',
+                          style:
+                              TextStyle(fontSize: 18, fontFamily: 'Brand-Bold'),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                TextField(
+                  controller: _publisher,
+                  decoration: const InputDecoration(
+                    label: Text("발행자를 입력해주세요"),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                TextField(
+                  controller: _category,
+                  decoration: const InputDecoration(
+                    label: Text("카테고리를 입력해주세요"),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                TextField(
+                  controller: _description,
+                  decoration: const InputDecoration(
+                    label: Text("설명을 입력해주세요"),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: () {
+                    mint();
+                  },
+                  child: const Text('NFT 민팅'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void mint() {
+    if (_publisher.text.isEmpty) {
+      Fluttertoast.showToast(
+          msg: "발행자를 입력해주세요.",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.CENTER,
+          timeInSecForIosWeb: 1,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+          fontSize: 16.0);
+    }
+
+    if (_category.text.isEmpty) {
+      Fluttertoast.showToast(
+          msg: "카테고리를 입력해주세요.",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.CENTER,
+          timeInSecForIosWeb: 1,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+          fontSize: 16.0);
+    }
+
+    if (_description.text.isEmpty) {
+      Fluttertoast.showToast(
+          msg: "설명을 입력해주세요.",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.CENTER,
+          timeInSecForIosWeb: 1,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+          fontSize: 16.0);
+    }
+
+    // metaData 맵 생성
+    Map<String, dynamic> metaData = {};
+
+    // 필요한 속성 추가
+    metaData["publisher"] = _publisher.text;
+    metaData["category"] = _category.text;
+    metaData["description"] = _description.text;
+    metaData["images"] = ImagePickerService.cid;
+
+    // JSON 문자열로 변환하여 출력
+    String jsonString = jsonEncode(metaData);
+    print(jsonString);
+
+    // Convert jsonString to bytes (UTF-8)
+    List<int> jsonData = utf8.encode(jsonString);
+  }
+}
