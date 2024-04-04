@@ -1,0 +1,160 @@
+import 'dart:math';
+import 'dart:typed_data';
+
+import 'package:flutter/material.dart';
+import 'package:bip39/bip39.dart' as bip39;
+import 'package:netxproject/main_screen.dart';
+import 'package:web3dart/crypto.dart';
+import 'package:web3dart/web3dart.dart';
+import 'package:encrypted_shared_preferences/encrypted_shared_preferences.dart';
+
+void main() {
+  runApp(MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Wallet App',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: MyHomePage(),
+    );
+  }
+}
+
+class MyHomePage extends StatefulWidget {
+  @override
+  _MyHomePageState createState() => _MyHomePageState();
+}
+
+class _MyHomePageState extends State<MyHomePage> {
+  final TextEditingController _passwordController = TextEditingController();
+
+  EncryptedSharedPreferences encryptedSharedPreferences =
+      EncryptedSharedPreferences();
+  String seed = '';
+  String publickey = '';
+  String privateKey = '';
+  String keystore = '';
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Wallet App'),
+      ),
+      body: SingleChildScrollView(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Text(
+                'Seed: $seed',
+                style: const TextStyle(fontSize: 20),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Public Address: $publickey',
+                style: const TextStyle(fontSize: 20),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Private Key: $privateKey',
+                style: const TextStyle(fontSize: 20),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'story Key: $keystore',
+                style: const TextStyle(fontSize: 20),
+              ),
+              TextField(
+                controller: _passwordController,
+                decoration: const InputDecoration(
+                  label: Text("비밀번호를 입력하세요"),
+                ),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () {
+                  createWallet();
+                },
+                child: const Text('Create Wallet'),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).push(MaterialPageRoute(
+                      builder: (context) => const MainScreen()));
+                },
+                child: const Text('IPFS'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  bool isPasswordEmpty(String password) {
+    return password.isEmpty;
+  }
+
+  createWallet() async {
+    String password = _passwordController.text;
+    if (isPasswordEmpty(password)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('비밀번호를 입력해주세요.'),
+          duration: Duration(seconds: 2), // Optional duration
+        ),
+      );
+    }
+
+    String mnemonic = bip39.generateMnemonic();
+    bip39.mnemonicToSeedHex(mnemonic);
+
+    //print(mnemonic);
+    //print(seedHex);
+
+    // Update to firestore
+    // appController.updateUserWallet(wallet: address.hex);
+
+    final random = Random.secure();
+    final privateKeyBytes = Uint8List(32);
+    for (int i = 0; i < 32; i++) {
+      privateKeyBytes[i] = random.nextInt(256); // Generate random byte (0-255)
+    }
+
+    final privateKeyHex = '0x${bytesToHex(privateKeyBytes)}';
+
+    print("privateKeyHex:: 0x$privateKeyHex");
+
+    // Generate keystore
+    final credentials = EthPrivateKey.fromHex(privateKeyHex);
+    Wallet wallet = Wallet.createNew(credentials, password, random);
+
+    keystore = wallet.toJson();
+
+    print("keystore:: ${keystore}");
+
+    // ignore: deprecated_member_use
+    EthereumAddress address = await credentials.extractAddress();
+    //print("address:: ${address}");
+
+    setState(() {
+      seed = mnemonic;
+      privateKey = privateKeyHex;
+      publickey = address.hex;
+      keystore = keystore;
+    });
+
+    encryptedSharedPreferences.setString("seed", mnemonic);
+    encryptedSharedPreferences.setString("privateKey", privateKey);
+
+    encryptedSharedPreferences.setString("publickey", publickey);
+    encryptedSharedPreferences.setString("keystore", keystore);
+  }
+}
