@@ -1,0 +1,129 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
+// ignore: depend_on_referenced_packages
+import 'package:http/http.dart';
+import 'package:web3dart/web3dart.dart';
+
+void main() {
+  runApp(const MyNFT());
+}
+
+class MyNFT extends StatelessWidget {
+  const MyNFT({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'NFT',
+      theme: ThemeData(
+        primarySwatch: Colors.green,
+      ),
+      home: const MyHomePage(title: 'NFT'),
+    );
+  }
+}
+
+class MyHomePage extends StatefulWidget {
+  const MyHomePage({Key? key, required this.title}) : super(key: key);
+  final String title;
+
+  @override
+  State<MyHomePage> createState() => _MyHomePageState();
+}
+
+class _MyHomePageState extends State<MyHomePage> {
+  // 연결하려는 네트워크 : BNB TESTNET
+  static const apiUrl = "https://data-seed-prebsc-1-s1.bnbchain.org:8545";
+  final Web3Client _client = Web3Client(apiUrl, Client());
+
+  // 메타마스크에서 가져와야하는 지갑키
+  static const privateKey =
+      "ed1228c38f31132e994365024dff6a17fe208876b3f91150d26f127cdfd666cc";
+  final EthPrivateKey _credentials = EthPrivateKey.fromHex(privateKey);
+
+  // 스마트 컨트랙트의 주소 값 : 리믹스에서 확인해야함
+  // 0x17A9cD164a30b48bB6b9ACbAC649942A617BCe0e mint
+  // 0x19c0CD493d5d5b2fb7ac7E91b50D6d26b5F483c2 sale
+  // 0x9ccC665b59903b1F5b4578260Ac24d9Da8b4a2df get
+  static final EthereumAddress contractAddr =
+      EthereumAddress.fromHex('0x17A9cD164a30b48bB6b9ACbAC649942A617BCe0e');
+  DeployedContract? _contract;
+  ContractFunction? _mintNFT;
+  ContractFunction? _getMyNFT;
+
+  @override
+  void initState() {
+    super.initState();
+    // ABI 파일 가져오기
+    readAbi().then((String value) {
+      _contract = DeployedContract(
+        ContractAbi.fromJson(value, 'MyNFT'), // 'MyNFT'는 ABI의 이름입니다.
+        contractAddr,
+      );
+      _mintNFT = _contract?.function('mintNFT');
+      _getMyNFT = _contract?.function('get');
+
+      print("_mintNFT: $_mintNFT");
+    });
+  }
+
+  Future<String> readAbi() async {
+    return await rootBundle.loadString('assets/mint_nft_token_abi.json');
+  }
+
+  Future<void> _setMint(String hashMetaUrl) async {
+    print("_contract: $_contract");
+    print("_mintNFT: $_mintNFT");
+    if (_contract == null || _mintNFT == null) {
+      print('스마트 컨트랙트가 아직 초기화되지 않았습니다.');
+      return;
+    }
+
+    try {
+      var result = await _client.sendTransaction(
+        _credentials,
+        Transaction.callContract(
+          contract: _contract!,
+          function: _mintNFT!,
+          parameters: [hashMetaUrl],
+        ),
+        chainId: 97,
+      );
+      print('민팅 트랜잭션 성공! $result');
+    } catch (e) {
+      print('민팅 트랜잭션 실패: $e');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+        appBar: AppBar(
+          title: Text(widget.title),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: <Widget>[
+                  // 값을 추가하는 함수
+                  ElevatedButton(
+                    onPressed: () {
+                      _setMint(
+                          'https://bafkreigniuqqhlaoqgqz4l2trtianl5z24eiclnr5dqolwuydtop36mzwy.ipfs.dweb.link/');
+                    },
+                    child: const Text('민팅하기'),
+                  ),
+                ],
+              ),
+              ElevatedButton(
+                onPressed: () {},
+                child: const Text('My NFT'),
+              ),
+            ],
+          ),
+        ));
+  }
+}
