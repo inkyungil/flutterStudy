@@ -1,0 +1,100 @@
+import 'dart:convert';
+
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:rxdart/rxdart.dart';
+
+void main() {
+  runApp(
+    MyApp(),
+  );
+}
+
+class MyApp extends StatefulWidget {
+  const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  String chat_msg = "";
+
+  Future<void> join() async {
+    chat_msg = "";
+    final url = Uri.parse('https://propose9898.cafe24.com/api/streamTest.php');
+    final request = http.Request("POST", url)
+      ..headers.addAll(
+        {
+          'mb_id': "test",
+        },
+      );
+
+    final resp = await http.Client().send(request);
+    final byteStream = resp.stream.asyncExpand(
+      (event) => Rx.timer(
+        event,
+        const Duration(milliseconds: 50),
+      ),
+    );
+
+    var buffer = ""; // Buffer to hold partial JSON data
+    await for (final byte in byteStream) {
+      try {
+        var decoded = utf8.decode(byte, allowMalformed: false);
+        buffer += decoded;
+
+        // Parse the JSON response to extract the "msg" value
+        final jsonResponse = jsonDecode(buffer);
+        final msg = jsonResponse['msg'] as String;
+
+        // Process each character in the "msg" value and update chat_msg one character at a time
+        for (final char in msg.runes) {
+          // Delay before adding each character to simulate one-character-at-a-time display
+          await Future.delayed(const Duration(milliseconds: 50));
+
+          setState(() {
+            chat_msg += String.fromCharCode(char);
+          });
+        }
+      } catch (e) {
+        print(e.toString());
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: Scaffold(
+        appBar: AppBar(
+          title: Text("title"),
+        ),
+        body: SingleChildScrollView(
+          child: Padding(
+            padding: EdgeInsets.all(8),
+            child: Column(
+              children: [
+                SizedBox(height: 20),
+                ElevatedButton(
+                    onPressed: () {
+                      join();
+                    },
+                    child: Text('질문'),
+                    style: ButtonStyle(
+                      backgroundColor: MaterialStateProperty.all(Colors.green),
+                      foregroundColor: MaterialStateProperty.all(
+                          Colors.white), // 텍스트 색상을 흰색으로 설정
+
+                      minimumSize:
+                          MaterialStateProperty.all(Size(double.infinity, 50)),
+                    )),
+                Text('리턴값 한글자씩: $chat_msg')
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
